@@ -1,36 +1,14 @@
-NULL   =
-CC     = cc -std=c11
-PYTHON = python3
-CYTHON = cython3 -3
+CC     = cc
+CFLAGS = -g -O2 -std=c11 -pedantic -Wall -Wextra
 
-all: # is the default.
-include python-vars.mk
-
-all: prescan.$M
-
-prescan.$M: prescan.$O prescan-impl.$O
-	$(CC) $(LINKER_ARGS)
-
+all: test-prescan
 clean:
-	-rm -f \
-	   _prescan.$M prescan.$O prescan-glue.$O prescan-glue.c \
-	   python-vars.mk
-	-rm -rf __pycache__
+	-rm -f test-prescan test-prescan.o prescan.o
 
-# Header dependencies
-prescan.c: prescan.pyx
+test-prescan: test-prescan.o prescan.o
+	$(CC) $(CFLAGS) test-prescan.o prescan.o -o test-prescan
 
-prescan-impl.$O: prescan-impl.c prescan.h
-prescan.$O: prescan.c prescan.h
-
-# Python boilerplate
-python-vars.mk:
-	$(PYTHON) get-module-compile-cmds.py $@
-
-%.$O: %.c
-	$(CC) $(COMPILER_ARGS)
-
-%.c: %.pyx
-	$(CYTHON) -I. -o $@ $<
+prescan.o: prescan.c prescan.h
+test-prescan.o: test-prescan.c prescan.h
 
 .PHONY: all clean
