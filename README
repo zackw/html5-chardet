@@ -1,0 +1,5 @@
+The meat of this code was originally written by Henri Sivonen.
+The original Java version may be found at
+https://hg.mozilla.org/projects/htmlparser/file/889da0df0868/src/nu/validator/htmlparser/impl/MetaScanner.java
+The original set of tests may be found at
+https://github.com/html5lib/html5lib-tests/tree/master/encoding
