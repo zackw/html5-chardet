@@ -65,11 +65,14 @@ struct canonical_encoding
   const char *canonical;
 };
 
-/* This is the list of encodings that browsers are required to recognize,
-   from http://encoding.spec.whatwg.org/#encodings.  It has been sorted by
-   field 0 to permit binary search, and two adjustments made after-the-fact
-   by Gecko's nsHtml5MetaScanner::tryCharset have been applied to the table. */
-
+/* This is the list of encodings that browsers are required to
+   recognize, from http://encoding.spec.whatwg.org/#encodings.
+   It has been sorted by field 0 to permit binary search, and the
+   substitution of "windows-1252" for "x-user-defined", mandated by
+   the prescan algorithm's step 2.14, has been applied to the table.
+   (The substitution of utf-8 for utf-16, mandated by step 2.13, is
+   handled below, because we *don't* want to do it in
+   canonical_encoding_for_label.)  */
 static const struct canonical_encoding canonical_encodings[] = {
   { "866",                 "ibm866"         },
   { "ansi_x3.4-1968",      "windows-1252"   },
@@ -252,9 +255,9 @@ static const struct canonical_encoding canonical_encodings[] = {
   { "tis-620",             "windows-874"    },
   { "unicode-1-1-utf-8",   "utf-8"          },
   { "us-ascii",            "windows-1252"   },
-  { "utf-16",              "utf-8"          },
-  { "utf-16be",            "utf-8"          },
-  { "utf-16le",            "utf-8"          },
+  { "utf-16",              "utf-16le"       },
+  { "utf-16be",            "utf-16be"       },
+  { "utf-16le",            "utf-16le"       },
   { "utf-8",               "utf-8"          },
   { "utf8",                "utf-8"          },
   { "visual",              "iso-8859-8"     },
@@ -297,6 +300,20 @@ canonical_encoding_compar(const void *k, const void *v)
   return strcmp(key, val->encoding);
 }
 
+const char *
+canonical_encoding_for_label(const char *label)
+{
+  struct canonical_encoding *match =
+    bsearch(label, canonical_encodings,
+            sizeof(canonical_encodings) / sizeof(struct canonical_encoding),
+            sizeof(struct canonical_encoding),
+            canonical_encoding_compar);
+
+  if (match)
+    return match->canonical;
+  return 0;
+}
+
 static const char *
 validate_charset(const char *charset, size_t charset_len)
 {
@@ -308,21 +325,22 @@ validate_charset(const char *charset, size_t charset_len)
     charset_len--;
   }
 
-  char key[charset_len + 1];
+  char label[charset_len + 1];
   for (size_t i = 0; i < charset_len; i++) {
-    key[i] = toAsciiLowerCase(charset[i]);
+    label[i] = toAsciiLowerCase(charset[i]);
   }
-  key[charset_len] = '\0';
+  label[charset_len] = '\0';
 
-  struct canonical_encoding *match =
-    bsearch(key, canonical_encodings,
-            sizeof(canonical_encodings) / sizeof(struct canonical_encoding),
-            sizeof(struct canonical_encoding),
-            canonical_encoding_compar);
-
-  if (match)
-    return match->canonical;
-  return 0;
+  const char *canon = canonical_encoding_for_label(label);
+  if (!canon)
+    return 0;
+  /* These replacements are mandated by HTML5.  We do them here because
+     they are inappropriate for canonical_encoding_for_label. */
+  if (!strncmp(canon, "utf-16", sizeof "utf-16" - 1))
+    return "utf-8";
+  if (!strcmp(canon, "x-user-defined"))
+    return "windows-1252";
+  return canon;
 }
 
 static const char *
