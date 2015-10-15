@@ -8,3 +8,4 @@
 # Compilation artifacts
 *.o
 test-prescan
+uncanon-max.inc
